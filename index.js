@@ -19,6 +19,7 @@ const passport = require("passport"); // Middleware
 
 const passportLocalMongoose = require("passport-local-mongoose"); // Database connection to the middleware
 
+const findOrCreate = require("mongoose-findorcreate"); // Register Plugin
 
 // Server initialization
 
@@ -78,6 +79,8 @@ passport.deserializeUser(function (id, done) { // Initializing Logout Method
 
 userSchema.plugin(passportLocalMongoose); // Middleware Plugin
 
+userSchema.plugin(findOrCreate); // Register Plugin
+
 
 // Database Model
 
@@ -101,31 +104,11 @@ passport.use(new GoogleStrategy({ // Creating a new user
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo" // Solving the google+ deprecation error
 },
 
-    function (accessToken, refreshToken, profile, done) { // Register/Login method
+    function (accessToken, refreshToken, profile, cb) { // Register/Login method
 
-        User.findOne({
-            'google.id': profile.id
-        }, function (err, user) {
-            if (err) {
-                return done(err);
-            }
-            if (!user) { // If there are no users
-                user = new User({ // Creating a new user
-                    name: profile.displayName,
-                    email: profile.emails[0].value,
-                    password: profile.password,
-                    provider: 'google',
-                    google: profile._json
-                });
-                user.save(function (err) {
-                    if (err) console.log(err);
-                    return done(err, user);
-                });
-            } else {
-                //found user. Return
-                return done(err, user);
-            }
-        });
+        User.findOrCreate({ googleId: profile.id }, function (err, user) {
+            return cb(err, user);
+          });
 
     }
 ));
